@@ -22,6 +22,8 @@ storage_password = []
 storage_pictures = []
 USER_NAME = ''
 PASSWORD = ''
+count_pictures = 1
+count_five_pictures = 0
 
 NUMBER_PICTURES = 0
 
@@ -120,6 +122,31 @@ def switch_to_pictures(entry_user_name, entry_password, frame):
             place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
 
 
+def print_pictures(image, frame):
+    global panel, count_pictures, count_five_pictures
+    if panel is None:
+        panel = tk.Label(frame, image=image)
+        panel.image = image
+        panel.place(x=100 + (200 * count_pictures),
+                    y=200 + (280 * count_five_pictures), anchor=tk.CENTER)
+        tk.Button(frame, text="To edit", font=MEDIUM1).\
+            place(x=100 + (200 * count_pictures), y=330 + (280 * count_five_pictures), anchor=tk.CENTER,
+                  width=100, height=20)
+        tk.Button(frame, text="To download", font=MEDIUM1). \
+            place(x=100 + (200 * count_pictures), y=350 + (280 * count_five_pictures), anchor=tk.CENTER,
+                  width=100, height=20)
+        count_pictures += 1
+        print(f'Count pictures: {count_pictures}')
+        if count_pictures / 5 == 1:
+            count_five_pictures = (count_pictures / 5)
+            count_pictures = 0
+            print(f'Count five pictures: {count_five_pictures}')
+    else:
+        panel.configure(image=image)
+        panel.image = image
+    panel = None
+
+
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -196,10 +223,9 @@ class LogInPage(tk.Frame):
 class PicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global panel, storage_pictures
-        count_pictures = 0
-        y_pictures = 200
+        global panel, storage_pictures, count_pictures, count_five_pictures
         count_five_pictures = 0
+        count_pictures = 0
         tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
             place(x=500, y=50, anchor=tk.CENTER, width=600, height=100)
         tk.Button(self, text="Go to Start Page",
@@ -214,17 +240,7 @@ class PicturesPage(tk.Frame):
         print(storage_pictures)
         if storage_pictures is not None:
             for image in storage_pictures:
-                if panel is None:
-                    panel = tk.Label(self, image=image)
-                    panel.image = image
-                    panel.place(x=100 + 200 * count_pictures, y=y_pictures + 100 * count_five_pictures, anchor=tk.CENTER)
-                    count_pictures += 1
-                    if len(storage_pictures) / 5 == 1:
-                        count_five_pictures += 1
-                else:
-                    panel.configure(image=image)
-                    panel.image = image
-                panel = None
+                print_pictures(image, self)
         else:
             tk.Label(self, text="Theres are no pictures in the storage").pack()
 
@@ -241,11 +257,13 @@ class EditPicturesPage(tk.Frame):
 class UploadPicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
+        global NUMBER_PICTURES
         tk.Label(self, text=Upload_pictures_Page, font=LARGEFONT).\
             place(x=500, y=50, anchor=tk.CENTER, width=600, height=100)
         tk.Button(self, text="Go to Start Page",
                   command=lambda: master.switch_frame(StartPage)).\
             place(x=400, y=100, anchor=tk.CENTER, width=200, height=50)
+        NUMBER_PICTURES = 0
         select_image_button = tk.Button(self, text="Select Image",
                                         command=lambda: select_image(self, select_image_button))
         select_image_button.\
