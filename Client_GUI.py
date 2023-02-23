@@ -1,4 +1,4 @@
-from tkinter import messagebox, filedialog, ttk, FLAT, RAISED
+from tkinter import messagebox, filedialog, ttk, FLAT, RAISED, SOLID
 import tkinter as tk
 from PIL import Image, ImageTk
 
@@ -26,6 +26,9 @@ count_pictures = 1
 count_five_pictures = 0
 
 EDIT_IMAGE = ''
+BUTTON_IMAGE = ''
+NUMBER_BUTTON_IMAGE = 0
+BUTTON_IMAGE_LIST = []
 NUMBER_PICTURES = 0
 
 panel = None
@@ -105,11 +108,6 @@ def reset_pictures(frame):
     tk.Label(frame, text="All the storage got reset").pack()
 
 
-def set_image(image):
-    global EDIT_IMAGE
-    EDIT_IMAGE = image
-
-
 def switch_to_pictures(entry_user_name, entry_password, frame):
     # sends the username and the password to the sever for checking them in the database
     global access
@@ -129,23 +127,29 @@ def switch_to_pictures(entry_user_name, entry_password, frame):
             place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
 
 
+def set_image(image, button_image):
+    global EDIT_IMAGE, BUTTON_IMAGE, NUMBER_BUTTON_IMAGE
+    EDIT_IMAGE = image
+    button_image.config(relief=tk.SOLID, bd=4, bg="#FFC107")
+    BUTTON_IMAGE_LIST.append(button_image)
+    BUTTON_IMAGE_LIST[NUMBER_BUTTON_IMAGE - 1].config(relief=FLAT, bd=4, bg="white")
+    NUMBER_BUTTON_IMAGE += 1
+
+
 def print_pictures(image, frame):
     global panel, count_pictures, count_five_pictures
     if panel is None:
-        panel = tk.Button(frame, image=image, relief=FLAT, command=lambda: set_image(image))
-        panel.image = image
-        panel.place(x=100 + (200 * count_pictures),
+        button_image = tk.Button(frame, image=image, relief=SOLID, command=lambda: set_image(image, button_image))
+        panel = button_image
+        panel.place(x=110 + (210 * count_pictures),
                     y=200 + (280 * count_five_pictures), anchor=tk.CENTER)
         count_pictures += 1
-        print(f'Count pictures: {count_pictures}')
         if count_pictures / 5 == 1:
             count_five_pictures = (count_pictures / 5)
             count_pictures = 0
-            print(f'Count five pictures: {count_five_pictures}')
     else:
         panel.configure(image=image)
         panel.image = image
-    panel = None
 
 
 class MainWindow(tk.Tk):
@@ -235,7 +239,7 @@ class LogInPage(tk.Frame):
 class PicturesPage1(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global panel, storage_pictures, count_pictures, count_five_pictures
+        global panel, storage_pictures, count_pictures, count_five_pictures, BUTTON_IMAGE
         count_five_pictures = 0
         count_pictures = 0
         tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
@@ -255,10 +259,10 @@ class PicturesPage1(tk.Frame):
         tk.Button(self, text="Go to page2", relief=RAISED,
                   command=lambda: master.switch_frame(StartPage)). \
             place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
-        print(storage_pictures)
         if storage_pictures is not None:
             for image in storage_pictures:
                 print_pictures(image, self)
+                panel = None
         else:
             tk.Label(self, text="Theres are no pictures in the storage").pack()
 
@@ -280,10 +284,10 @@ class PicturesPage2(tk.Frame):
         tk.Button(self, text="To Edit pictures").\
             place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
         # command=lambda: master.switch_frame(EditPicturesPage)
-        print(storage_pictures)
         if storage_pictures is not None:
             for image in storage_pictures:
                 print_pictures(image, self)
+                panel = None
         else:
             tk.Label(self, text="Theres are no pictures in the storage").pack()
 
@@ -305,10 +309,10 @@ class PicturesPage3(tk.Frame):
         tk.Button(self, text="To Edit pictures",
                   command=lambda: master.switch_frame(EditPicturesPage)).\
             place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
-        print(storage_pictures)
         if storage_pictures is not None:
             for image in storage_pictures:
                 print_pictures(image, self)
+                panel = None
 
 
 class EditPicturesPage(tk.Frame):
@@ -321,17 +325,17 @@ class EditPicturesPage(tk.Frame):
         tk.Button(self, text="Go to Start Page", relief=RAISED,
                   command=lambda: master.switch_frame(StartPage)). \
             place(x=125, y=700, anchor=tk.CENTER, width=250, height=50)
-        tk.Button(self, text="To upload pictures", relief=RAISED,
-                  command=lambda: master.switch_frame(UploadPicturesPage)). \
+        tk.Button(self, text="To upload the picture", relief=RAISED,
+                  ). \
             place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
-        tk.Button(self, text="To Edit pictures", relief=RAISED,
-                  command=lambda: master.switch_frame(EditPicturesPage)). \
+        tk.Button(self, text="To download the pictures", relief=RAISED,
+                  ). \
             place(x=775, y=700, anchor=tk.CENTER, width=350, height=50)
-        tk.Button(self, text="Go to page2", relief=RAISED,
-                  command=lambda: master.switch_frame(StartPage)). \
+        tk.Button(self, text="Back to Pictures Page1", relief=RAISED,
+                  command=lambda: master.switch_frame(PicturesPage1)). \
             place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
         if panel is None:
-            panel = tk.Button(self, image=image, relief=FLAT, command=lambda: set_image(image))
+            panel = tk.Button(self, image=image, relief=FLAT)
             panel.image = image
             panel.place(x=100, y=300, anchor=tk.CENTER)
         else:
