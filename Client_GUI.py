@@ -1,6 +1,5 @@
+from tkinter import messagebox, filedialog, ttk, FLAT, RAISED
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 
 
@@ -25,8 +24,8 @@ USER_NAME = ''
 PASSWORD = ''
 count_pictures = 1
 count_five_pictures = 0
-IMAGE = ''
 
+EDIT_IMAGE = ''
 NUMBER_PICTURES = 0
 
 panel = None
@@ -65,6 +64,7 @@ def show_text(entry_user_name, entry_password, frame):
         tk.Label(frame, text=f"Your password is: -> {PASSWORD} <-", font=MEDIUM2). \
             place(x=650, y=400, anchor=tk.CENTER, width=240, height=50)
         print(f"With the password -> {PASSWORD} <-")
+        # sends the username and the password to server for storage them in the database
         storage_user_name.append(USER_NAME)
         storage_password.append(PASSWORD)
 
@@ -85,7 +85,7 @@ def select_image(frame, select_image_button):
                 panel = tk.Label(frame, image=image)
                 panel.image = image
                 storage_pictures.append(image)
-                panel.place(x=100+200*NUMBER_PICTURES, y=300, anchor=tk.CENTER)
+                panel.place(x=100+200*NUMBER_PICTURES, y=150, anchor=tk.CENTER)
                 NUMBER_PICTURES += 1
             else:
                 panel.configure(image=image)
@@ -105,7 +105,13 @@ def reset_pictures(frame):
     tk.Label(frame, text="All the storage got reset").pack()
 
 
+def set_image(image):
+    global EDIT_IMAGE
+    EDIT_IMAGE = image
+
+
 def switch_to_pictures(entry_user_name, entry_password, frame):
+    # sends the username and the password to the sever for checking them in the database
     global access
     access = False
     print(f'User name: {entry_user_name.get()}, Password: {entry_password.get()}')
@@ -124,20 +130,12 @@ def switch_to_pictures(entry_user_name, entry_password, frame):
 
 
 def print_pictures(image, frame):
-    global panel, count_pictures, count_five_pictures, IMAGE
+    global panel, count_pictures, count_five_pictures
     if panel is None:
-        panel = tk.Label(frame, image=image)
+        panel = tk.Button(frame, image=image, relief=FLAT, command=lambda: set_image(image))
         panel.image = image
         panel.place(x=100 + (200 * count_pictures),
                     y=200 + (280 * count_five_pictures), anchor=tk.CENTER)
-
-        tk.Button(frame, text="To edit", font=MEDIUM1,
-                  command=lambda: (frame.master.switch_frame(EditPicturesPage), IMAGE == image)).\
-            place(x=100 + (200 * count_pictures), y=330 + (280 * count_five_pictures), anchor=tk.CENTER,
-                  width=100, height=20)
-        tk.Button(frame, text="To download", font=MEDIUM1). \
-            place(x=100 + (200 * count_pictures), y=350 + (280 * count_five_pictures), anchor=tk.CENTER,
-                  width=100, height=20)
         count_pictures += 1
         print(f'Count pictures: {count_pictures}')
         if count_pictures / 5 == 1:
@@ -169,19 +167,21 @@ class StartPage(tk.Frame):
         super().__init__(master)
         tk.Label(self, text="Start Page - managing and editing photos", font=LARGEFONT).\
             place(x=600, y=50, anchor=tk.CENTER, width=1200, height=150)
-        tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1).\
-            place(x=600, y=145, anchor=tk.CENTER, width=200, height=20)
         tk.Label(self, text="For the Clients", font=MEDIUM1).\
             place(x=600, y=950, anchor=tk.CENTER, width=200, height=20)
-        tk.Button(self, text=Sign_Up_Page, command=lambda: master.switch_frame(SignUpPage)).\
+        tk.Button(self, text=Sign_Up_Page, relief=RAISED,
+                  command=lambda: master.switch_frame(SignUpPage)).\
             place(x=200, y=700, anchor=tk.CENTER, width=400, height=50)
-        tk.Button(self, text=Log_in_Page, command=lambda: master.switch_frame(LogInPage)).\
+        tk.Button(self, text=Log_in_Page, relief=RAISED,
+                  command=lambda: master.switch_frame(LogInPage)).\
             place(x=600, y=700, anchor=tk.CENTER, width=400, height=50)
-        tk.Button(self, text=exit_button, command=lambda: exit_window(exit_button)).\
+        tk.Button(self, text=exit_button, relief=RAISED,
+                  command=lambda: exit_window(exit_button)).\
             place(x=1000, y=700, anchor=tk.CENTER, width=400, height=50)
         tk.Label(self, text="For the Host", font=MEDIUM1).\
             place(x=600, y=365, anchor=tk.CENTER, width=200, height=20)
-        tk.Button(self, text="Reset pictures", command=lambda: reset_pictures(self)).\
+        tk.Button(self, text="Reset pictures", relief=RAISED,
+                  command=lambda: reset_pictures(self)).\
             place(x=600, y=400, anchor=tk.CENTER, width=400, height=50)
 
 
@@ -189,21 +189,23 @@ class SignUpPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
         tk.Label(self, text="Sign in section", font=LARGEFONT).\
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
-        tk.Label(self, text=f"Please enter User Name: ").\
-            place(x=200, y=300, anchor=tk.CENTER, width=200, height=50)
+            place(x=600, y=100, anchor=tk.CENTER, width=1200, height=150)
+        tk.Label(self, text=f"Please enter User Name: ", font=MEDIUM1).\
+            place(x=100, y=300, anchor=tk.CENTER, width=200, height=50)
         entry_user_name = ttk.Entry(self, font="Verdana")
         entry_user_name.\
-            place(x=400, y=300, anchor=tk.CENTER, width=200, height=25)
-        tk.Label(self, text=f"Please enter PassWord: ").\
-            place(x=200, y=400, anchor=tk.CENTER, width=200, height=50)
+            place(x=300, y=300, anchor=tk.CENTER, width=200, height=25)
+        tk.Label(self, text=f"Please enter PassWord: ", font=MEDIUM1).\
+            place(x=100, y=400, anchor=tk.CENTER, width=200, height=50)
         entry_password = ttk.Entry(self, font="Verdana")
         entry_password.\
-            place(x=400, y=400, anchor=tk.CENTER, width=200, height=25)
-        tk.Button(self, text="Sign In", command=lambda: show_text(entry_user_name, entry_password, self)).\
-            place(x=200, y=600, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="Go to Start Page", command=lambda: master.switch_frame(StartPage)).\
-            place(x=400, y=600, anchor=tk.CENTER, width=200, height=50)
+            place(x=300, y=400, anchor=tk.CENTER, width=200, height=25)
+        tk.Button(self, text="Sign Up", relief=RAISED,
+                  command=lambda: show_text(entry_user_name, entry_password, self)).\
+            place(x=100, y=600, anchor=tk.CENTER, width=200, height=50)
+        tk.Button(self, text="Go to Start Page", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)).\
+            place(x=300, y=600, anchor=tk.CENTER, width=200, height=50)
 
 
 class LogInPage(tk.Frame):
@@ -211,22 +213,23 @@ class LogInPage(tk.Frame):
         super().__init__(master)
         global access
         tk.Label(self, text=Log_in_Page, font=LARGEFONT).\
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
+            place(x=600, y=100, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Please enter User Name:").\
-            place(x=200, y=300, anchor=tk.CENTER, width=200, height=50)
+            place(x=100, y=300, anchor=tk.CENTER, width=200, height=50)
         entry_user_name = ttk.Entry(self, font="Verdana")
         entry_user_name.\
-            place(x=400, y=300, anchor=tk.CENTER, width=200, height=25)
+            place(x=300, y=300, anchor=tk.CENTER, width=200, height=25)
         tk.Label(self, text=f"Please enter Password").\
-            place(x=200, y=400, anchor=tk.CENTER, width=200, height=50)
+            place(x=100, y=400, anchor=tk.CENTER, width=200, height=50)
         entry_password = ttk.Entry(self, font="Verdana")
         entry_password.\
-            place(x=400, y=400, anchor=tk.CENTER, width=200, height=25)
-        tk.Button(self, text="=Log in to see the pictures=",
+            place(x=300, y=400, anchor=tk.CENTER, width=200, height=25)
+        tk.Button(self, text="=Log in to see the pictures=", relief=RAISED,
                   command=lambda: switch_to_pictures(entry_user_name, entry_password, self)).\
-            place(x=200, y=600, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="Go to Start Page", command=lambda: master.switch_frame(StartPage)).\
-            place(x=400, y=600, anchor=tk.CENTER, width=200, height=50)
+            place(x=100, y=600, anchor=tk.CENTER, width=200, height=50)
+        tk.Button(self, text="Go to Start Page", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)).\
+            place(x=300, y=600, anchor=tk.CENTER, width=200, height=50)
 
 
 class PicturesPage1(tk.Frame):
@@ -236,16 +239,22 @@ class PicturesPage1(tk.Frame):
         count_five_pictures = 0
         count_pictures = 0
         tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
-        tk.Button(self, text="Go to Start Page",
+            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
+        tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
+            place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
+        tk.Button(self, text="Go to Start Page", relief=RAISED,
                   command=lambda: master.switch_frame(StartPage)).\
-            place(x=100, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To upload pictures",
+            place(x=125, y=700, anchor=tk.CENTER, width=250, height=50)
+        tk.Button(self, text="To upload pictures", relief=RAISED,
                   command=lambda: master.switch_frame(UploadPicturesPage)).\
-            place(x=300, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To Edit pictures",
+            place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
+        tk.Button(self, text="To Edit pictures", relief=RAISED,
                   command=lambda: master.switch_frame(EditPicturesPage)).\
-            place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
+            place(x=775, y=700, anchor=tk.CENTER, width=350, height=50)
+        # command=lambda: master.switch_frame(EditPicturesPage)
+        tk.Button(self, text="Go to page2", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)). \
+            place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
         print(storage_pictures)
         if storage_pictures is not None:
             for image in storage_pictures:
@@ -261,16 +270,16 @@ class PicturesPage2(tk.Frame):
         count_five_pictures = 0
         count_pictures = 0
         tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
-        tk.Button(self, text="Go to Start Page",
-                  command=lambda: master.switch_frame(StartPage)).\
-            place(x=100, y=700, anchor=tk.CENTER, width=200, height=50)
+            place(x=960, y=20, anchor=tk.CENTER, width=1200, height=150)
+        tk.Button(self, text="Back to page1",
+                  command=lambda: master.switch_frame(StartPage)). \
+            place(x=200, y=700, anchor=tk.CENTER, width=200, height=50)
         tk.Button(self, text="To upload pictures",
                   command=lambda: master.switch_frame(UploadPicturesPage)).\
             place(x=300, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To Edit pictures",
-                  command=lambda: master.switch_frame(EditPicturesPage)).\
+        tk.Button(self, text="To Edit pictures").\
             place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
+        # command=lambda: master.switch_frame(EditPicturesPage)
         print(storage_pictures)
         if storage_pictures is not None:
             for image in storage_pictures:
@@ -286,7 +295,7 @@ class PicturesPage3(tk.Frame):
         count_five_pictures = 0
         count_pictures = 0
         tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
+            place(x=960, y=20, anchor=tk.CENTER, width=1200, height=150)
         tk.Button(self, text="Go to Start Page",
                   command=lambda: master.switch_frame(StartPage)).\
             place(x=100, y=700, anchor=tk.CENTER, width=200, height=50)
@@ -305,13 +314,45 @@ class PicturesPage3(tk.Frame):
 class EditPicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global IMAGE
-        image = IMAGE
+        global EDIT_IMAGE, panel
+        image = EDIT_IMAGE
         tk.Label(self, text=Edit_Pictures_Page, font=LARGEFONT). \
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
-        tk.Button(self, text="Go to Start Page",
-                  command=lambda: master.switch_frame(StartPage), font=LARGEFONT).\
-            place(x=500, y=50, anchor=tk.CENTER, width=600, height=100)
+            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
+        tk.Button(self, text="Go to Start Page", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)). \
+            place(x=125, y=700, anchor=tk.CENTER, width=250, height=50)
+        tk.Button(self, text="To upload pictures", relief=RAISED,
+                  command=lambda: master.switch_frame(UploadPicturesPage)). \
+            place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
+        tk.Button(self, text="To Edit pictures", relief=RAISED,
+                  command=lambda: master.switch_frame(EditPicturesPage)). \
+            place(x=775, y=700, anchor=tk.CENTER, width=350, height=50)
+        tk.Button(self, text="Go to page2", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)). \
+            place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
+        if panel is None:
+            panel = tk.Button(self, image=image, relief=FLAT, command=lambda: set_image(image))
+            panel.image = image
+            panel.place(x=100, y=300, anchor=tk.CENTER)
+        else:
+            panel.configure(image=image)
+            panel.image = image
+        panel = None
+        tk.Button(self, text="Edit function1", relief=RAISED,
+                  ). \
+            place(x=800, y=150, anchor=tk.CENTER, width=200, height=40)
+        ttk.Entry()\
+            .place(x=800, y=195, anchor=tk.CENTER, width=200, height=25)
+        tk.Button(self, text="Edit function2", relief=RAISED,
+                  ). \
+            place(x=1100, y=150, anchor=tk.CENTER, width=200, height=40)
+        ttk.Entry()\
+            .place(x=1100, y=195, anchor=tk.CENTER, width=200, height=25)
+        tk.Button(self, text="Edit function3", relief=RAISED,
+                  ). \
+            place(x=800, y=250, anchor=tk.CENTER, width=200, height=40)
+        ttk.Entry()\
+            .place(x=800, y=295, anchor=tk.CENTER, width=200, height=25)
         print(f'The image: {image}')
 
 
@@ -320,17 +361,18 @@ class UploadPicturesPage(tk.Frame):
         super().__init__(master)
         global NUMBER_PICTURES
         tk.Label(self, text=Upload_pictures_Page, font=LARGEFONT).\
-            place(x=960, y=100, anchor=tk.CENTER, width=1200, height=150)
+            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
+        tk.Label(self, text="You can upload up to five pictures", font=MEDIUM1).\
+            place(x=150, y=640, anchor=tk.CENTER, width=300, height=20)
         tk.Button(self, text="Go to Start Page",
                   command=lambda: master.switch_frame(StartPage)).\
-            place(x=400, y=100, anchor=tk.CENTER, width=200, height=50)
+            place(x=100, y=700, anchor=tk.CENTER, width=200, height=50)
         NUMBER_PICTURES = 0
+        tk.Button(self, text="Upload", font=MEDIUM2, command=lambda: master.switch_frame(PicturesPage1)). \
+            place(x=300, y=700, anchor=tk.CENTER, width=200, height=50)
         select_image_button = tk.Button(self, text="Select Image",
                                         command=lambda: select_image(self, select_image_button))
-        select_image_button.\
-            place(x=600, y=100, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="Upload", font=MEDIUM2, command=lambda: master.switch_frame(PicturesPage1)). \
-            place(x=500, y=150, anchor=tk.CENTER, width=200, height=50)
+        select_image_button.place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
 
 
 if __name__ == '__main__':
