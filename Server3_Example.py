@@ -29,27 +29,29 @@ userDict = {}
 
 
 def password_handle(protocol, password, c):
-    global password_storage
+    global password_storage, password_exist, password_not_exist
     password_storage.append(password)
     print(f'The password storage: {password_storage}')
     if protocol == password_protocol + 'l':
         for p in password_storage:
             if password == p:
-                userDict[c].sendall(pickle.dumps(password_exist))
+                password_exist = pickle.dumps(password_exist)
+                c.sendall(password_exist)
                 return
-        userDict[c].sendall(pickle.dumps(password_not_exist))
+        c.sendall(pickle.dumps(password_not_exist))
 
 
 def username_handle(protocol, username, c):
-    global username_storage
+    global username_storage, username_not_exist, username_exist
     username_storage.append(username)
     print(f'The username storage: {username_storage}')
     if protocol == username_protocol + 'l':
         for u in username_storage:
             if username == u:
-                userDict[c].sendall(pickle.dumps(username_exist))
+                username_exist = pickle.dumps(username_exist)
+                c.sendall(username_exist)
                 return
-        userDict[c].sendall(pickle.dumps(username_not_exist))
+        c.sendall(pickle.dumps(username_not_exist))
 
 
 def picture_handle(picture):
@@ -59,21 +61,18 @@ def picture_handle(picture):
 
 # receive function
 def receive(c):
-    """    data = c.recv(1024)
-    userDict[c] = data.decode("ascii")  # First message contains Username
-    print(f"The user dict: {userDict}")"""
     while True:
         # data received from client
         data = c.recv(1024)
         data = pickle.loads(data)
         print(f'The data: {data}')
         # print(f'The data decoded: {data[0].decode()} , {data[1].decode()}')
-        if data[0] == password_protocol:
+        if data[0][0] + data[0][1] == password_protocol:
             password_handle(data[0], data[1], c)
-        elif data[0] == username_protocol:
+        elif data[0][0] + data[0][1] == username_protocol:
             userDict[c] = data[1]
             username_handle(data[0], data[1], c)
-        elif data[0] == pictures_protocol:
+        elif data[0][0] + data[0][1] == pictures_protocol:
             picture_handle(data[1])
 
         if not data or data == 'quit':
@@ -89,8 +88,7 @@ def receive(c):
 
 
 def broadcast(c, data):
-    print(" | ".join(str(i) for i in gDict.values()))
-    print(f'gDict: {gDict}, userDict: {userDict}')
+    # print(" | ".join(str(i) for i in gDict.values()))
 
     for connection in gDict:
         # message = f"{userDict[c]} > {data}"
