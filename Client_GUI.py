@@ -8,13 +8,14 @@ import pickle
 password_protocol = 'pa'
 username_protocol = 'us'
 pictures_protocol = 'pi'
+
 password_exist = '1'
 password_not_exist = '2'
 username_exist = 'a'
 username_not_exist = 'b'
 
 NUMBER = 1
-LARGEFONT = ("Times New Roman", 35)
+LARGE_FONT = ("Times New Roman", 35)
 MEDIUM1 = ("Impact", 12)
 MEDIUM2 = ("Helvetica", 10)
 dictionary = {"Home Page": 1, 'Go to Page1 - To Login': 2, '"Log in to see pictures"': 3, "Pictures Page": 4,
@@ -135,14 +136,15 @@ def switch_to_pictures(entry_user_name, entry_password, frame):
     msg_name = username_protocol + 'l', entry_user_name.get()
     s.sendall(pickle.dumps(msg_name))
     access_password = pickle.loads(s.recv(1024))
+    print(f"access_password: {access_password} + {type(access_password)}")
     msg_password = password_protocol + 'l', entry_password.get()
     s.sendall(pickle.dumps(msg_password))
     access_username = pickle.loads(s.recv(1024))
+    print(f"access_username: {access_username} + {type(access_username)}")
     if access_password == password_exist and access_username == username_exist:
         access = True
-    elif access_password == password_not_exist and access_username == username_not_exist:
+    elif access_password == password_not_exist or access_username == username_not_exist:
         access = False
-
     print(access)
     if access:
         frame.master.switch_frame(PicturesPage1)
@@ -206,7 +208,7 @@ class MainWindow(tk.Tk):
 class StartPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        tk.Label(self, text="Start Page - managing and editing photos", font=LARGEFONT).\
+        tk.Label(self, text="Start Page - managing and editing photos", font=LARGE_FONT).\
             place(x=600, y=50, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text="For the Clients", font=MEDIUM1).\
             place(x=600, y=950, anchor=tk.CENTER, width=200, height=20)
@@ -229,7 +231,7 @@ class StartPage(tk.Frame):
 class SignUpPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        tk.Label(self, text="Sign in section", font=LARGEFONT).\
+        tk.Label(self, text="Sign in section", font=LARGE_FONT).\
             place(x=600, y=100, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Please enter User Name: ", font=MEDIUM1).\
             place(x=100, y=300, anchor=tk.CENTER, width=200, height=50)
@@ -252,7 +254,7 @@ class SignUpPage(tk.Frame):
 class LogInPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        tk.Label(self, text=Log_in_Page, font=LARGEFONT).\
+        tk.Label(self, text=Log_in_Page, font=LARGE_FONT).\
             place(x=600, y=100, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Please enter User Name:").\
             place(x=100, y=300, anchor=tk.CENTER, width=200, height=50)
@@ -279,7 +281,7 @@ class PicturesPage1(tk.Frame):
             BUTTON_IMAGE, EDIT_IMAGE, IF_IMAGE_PRESSED
         count_five_pictures = 0
         count_pictures = 0
-        tk.Label(self, text="Picture Page1", font=LARGEFONT).\
+        tk.Label(self, text="Picture Page1", font=LARGE_FONT).\
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
             place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
@@ -315,7 +317,7 @@ class PicturesPage2(tk.Frame):
             BUTTON_IMAGE
         count_five_pictures = 0
         count_pictures = 0
-        tk.Label(self, text="Picture Page2", font=LARGEFONT).\
+        tk.Label(self, text="Picture Page2", font=LARGE_FONT).\
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
             place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
@@ -347,7 +349,7 @@ class PicturesPage3(tk.Frame):
             BUTTON_IMAGE
         count_five_pictures = 0
         count_pictures = 0
-        tk.Label(self, text="Picture Page3", font=LARGEFONT).\
+        tk.Label(self, text="Picture Page3", font=LARGE_FONT).\
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
             place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
@@ -380,7 +382,7 @@ class EditPicturesPage(tk.Frame):
             tk.Label(self, text="No picture was selected", font=MEDIUM1).\
                 place(x=600, y=90, anchor=tk.CENTER, width=200, height=40)
         image = EDIT_IMAGE
-        tk.Label(self, text=Edit_Pictures_Page, font=LARGEFONT). \
+        tk.Label(self, text=Edit_Pictures_Page, font=LARGE_FONT). \
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=100)
         tk.Button(self, text="Go to Start Page", relief=RAISED,
                   command=lambda: master.switch_frame(StartPage)). \
@@ -427,7 +429,7 @@ class UploadPicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
         global NUMBER_PICTURES
-        tk.Label(self, text=Upload_pictures_Page, font=LARGEFONT).\
+        tk.Label(self, text=Upload_pictures_Page, font=LARGE_FONT).\
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text="You can upload up to five pictures", font=MEDIUM1).\
             place(x=150, y=640, anchor=tk.CENTER, width=300, height=20)
@@ -454,7 +456,7 @@ if __name__ == '__main__':
 
         root = MainWindow()
         root.title("Pictures for your day")
-        root.minsize(1200, 1150)
+        root.minsize(1200, 725)
         root.mainloop()
     except ConnectionError and ConnectionResetError as err:
         print(f'Something came up: {err}')
