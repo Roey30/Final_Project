@@ -1,7 +1,17 @@
-from tkinter import messagebox, filedialog, ttk, FLAT, RAISED, SOLID
+from tkinter import messagebox, filedialog, ttk, FLAT, RAISED
 import tkinter as tk
 from PIL import Image, ImageTk
+import socket
+import pickle
 
+
+password_protocol = 'pa'
+username_protocol = 'us'
+pictures_protocol = 'pi'
+password_exist = '1'
+password_not_exist = '2'
+username_exist = 'a'
+username_not_exist = 'b'
 
 NUMBER = 1
 LARGEFONT = ("Times New Roman", 35)
@@ -27,8 +37,7 @@ count_five_pictures = 0
 
 EDIT_IMAGE = ''
 BUTTON_IMAGE = ''
-NUMBER_BUTTON_IMAGE = 0
-BUTTON_IMAGE_LIST = []
+IF_IMAGE_PRESSED = False
 NUMBER_PICTURES = 0
 
 panel = None
@@ -68,6 +77,10 @@ def show_text(entry_user_name, entry_password, frame):
             place(x=650, y=400, anchor=tk.CENTER, width=240, height=50)
         print(f"With the password -> {PASSWORD} <-")
         # sends the username and the password to server for storage them in the database
+        msg_name = username_protocol, USER_NAME
+        s.sendall(pickle.dumps(msg_name))
+        msg_password = password_protocol, PASSWORD
+        s.sendall(pickle.dumps(msg_password))
         storage_user_name.append(USER_NAME)
         storage_password.append(PASSWORD)
 
@@ -76,30 +89,36 @@ def show_text(entry_user_name, entry_password, frame):
 
 
 def select_image(frame, select_image_button):
-    global NUMBER_PICTURES
-    file_path = filedialog.askopenfilename()
-    if file_path:
-        try:
-            global panel
-            image = Image.open(file_path)
-            image = image.resize((200, 200), Image.LANCZOS)
-            image = ImageTk.PhotoImage(image)
-            if panel is None:
-                panel = tk.Label(frame, image=image)
-                panel.image = image
-                storage_pictures.append(image)
-                panel.place(x=100+200*NUMBER_PICTURES, y=150, anchor=tk.CENTER)
-                NUMBER_PICTURES += 1
-            else:
-                panel.configure(image=image)
-                panel.image = image
-            panel = None
-            if NUMBER_PICTURES > 4:
-                tk.Label(frame, text="You can upload up to five pictures", font=MEDIUM1). \
-                    place(x=500, y=500, anchor=tk.CENTER, width=300, height=50)
-                select_image_button.config(state='disabled')
-        except Exception as e:
-            messagebox.showerror("Error", "Failed to open image\n{}".format(e))
+    global NUMBER_PICTURES, EDIT_IMAGE
+    if EDIT_IMAGE == '':
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            try:
+                global panel
+                image = Image.open(file_path)
+                image = image.resize((200, 200), Image.LANCZOS)
+                image = ImageTk.PhotoImage(image)
+                if panel is None:
+                    panel = tk.Label(frame, image=image)
+                    panel.image = image
+                    # The client sends the picture to the server to his DataBase
+                    storage_pictures.append(image)
+                    panel.place(x=100+200*NUMBER_PICTURES, y=150, anchor=tk.CENTER)
+                    NUMBER_PICTURES += 1
+                else:
+                    panel.configure(image=image)
+                    panel.image = image
+                panel = None
+                if NUMBER_PICTURES > 4:
+                    tk.Label(frame, text="You can upload up to five pictures", font=MEDIUM1). \
+                        place(x=500, y=500, anchor=tk.CENTER, width=300, height=50)
+                    select_image_button.config(state='disabled')
+            except Exception as e:
+                messagebox.showerror("Error", "Failed to open image\n{}".format(e))
+    else:
+        storage_pictures.append(EDIT_IMAGE)
+        tk.Button(frame, text="Are you sure you want to upload this?", font=MEDIUM1)
+        frame.master.switch_frame(PicturesPage1)
 
 
 def reset_pictures(frame):
@@ -113,11 +132,16 @@ def switch_to_pictures(entry_user_name, entry_password, frame):
     global access
     access = False
     print(f'User name: {entry_user_name.get()}, Password: {entry_password.get()}')
-    for username in storage_user_name:
-        if entry_user_name.get() == username:
-            for password in storage_password:
-                if entry_password.get() == password:
-                    access = True
+    msg_name = username_protocol + 'l', entry_user_name.get()
+    s.sendall(pickle.dumps(msg_name))
+    access_password = pickle.loads(s.recv(1024))
+    msg_password = password_protocol + 'l', entry_password.get()
+    s.sendall(pickle.dumps(msg_password))
+    access_username = pickle.loads(s.recv(1024))
+    if access_password == password_exist and access_username == username_exist:
+        access = True
+    elif access_password == password_not_exist and access_username == username_not_exist:
+        access = False
 
     print(access)
     if access:
@@ -127,19 +151,32 @@ def switch_to_pictures(entry_user_name, entry_password, frame):
             place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
 
 
-def set_image(image, button_image):
-    global EDIT_IMAGE, BUTTON_IMAGE, NUMBER_BUTTON_IMAGE
-    EDIT_IMAGE = image
-    button_image.config(relief=tk.SOLID, bd=4, bg="#FFC107")
-    BUTTON_IMAGE_LIST.append(button_image)
-    BUTTON_IMAGE_LIST[NUMBER_BUTTON_IMAGE - 1].config(relief=FLAT, bd=4, bg="white")
-    NUMBER_BUTTON_IMAGE += 1
+def marked_image(image, button_image, frame):
+    global EDIT_IMAGE, BUTTON_IMAGE, IF_IMAGE_PRESSED
+    tk.Button(frame, text="Resets marked picture", command=lambda: reset_marked_image()).\
+        place(x=775, y=660, anchor=tk.CENTER, width=350, height=30)
+    if not IF_IMAGE_PRESSED:
+        EDIT_IMAGE = image
+        BUTTON_IMAGE = button_image
+        BUTTON_IMAGE.config(relief=tk.SOLID, bd=4, bg="#FFC107")
+        IF_IMAGE_PRESSED = True
+    else:
+        BUTTON_IMAGE.config(relief=FLAT, bd=4, bg="white")
+        BUTTON_IMAGE = button_image
+        BUTTON_IMAGE.config(relief=tk.SOLID, bd=4, bg="#FFC107")
+
+
+def reset_marked_image():
+    global BUTTON_IMAGE, EDIT_IMAGE
+    EDIT_IMAGE = ''
+    BUTTON_IMAGE.config(relief=FLAT, bd=4, bg="white")
 
 
 def print_pictures(image, frame):
     global panel, count_pictures, count_five_pictures
     if panel is None:
-        button_image = tk.Button(frame, image=image, relief=SOLID, command=lambda: set_image(image, button_image))
+        button_image = tk.Button(frame, image=image, relief=FLAT, bd=4, bg="white",
+                                 command=lambda: marked_image(image, button_image, frame))
         panel = button_image
         panel.place(x=110 + (210 * count_pictures),
                     y=200 + (280 * count_five_pictures), anchor=tk.CENTER)
@@ -215,7 +252,6 @@ class SignUpPage(tk.Frame):
 class LogInPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global access
         tk.Label(self, text=Log_in_Page, font=LARGEFONT).\
             place(x=600, y=100, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Please enter User Name:").\
@@ -239,10 +275,47 @@ class LogInPage(tk.Frame):
 class PicturesPage1(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global panel, storage_pictures, count_pictures, count_five_pictures, BUTTON_IMAGE
+        global panel, storage_pictures, count_pictures, count_five_pictures,\
+            BUTTON_IMAGE, EDIT_IMAGE, IF_IMAGE_PRESSED
         count_five_pictures = 0
         count_pictures = 0
-        tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
+        tk.Label(self, text="Picture Page1", font=LARGEFONT).\
+            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
+        tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
+            place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
+        tk.Button(self, text="Go to Start Page", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)).\
+            place(x=125, y=700, anchor=tk.CENTER, width=250, height=50)
+        tk.Button(self, text="To upload pictures", relief=RAISED,
+                  command=lambda: master.switch_frame(UploadPicturesPage)).\
+            place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
+        tk.Button(self, text="To Edit pictures", relief=RAISED,
+                  command=lambda: master.switch_frame(EditPicturesPage)).\
+            place(x=775, y=700, anchor=tk.CENTER, width=350, height=50)
+        # command=lambda: master.switch_frame(EditPicturesPage)
+        tk.Button(self, text="Go to page2", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)). \
+            place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
+        # receives the storage of pictures from the server
+        if storage_pictures is not None:
+            for image in storage_pictures:
+                print_pictures(image, self)
+                BUTTON_IMAGE = ''
+                IF_IMAGE_PRESSED = False
+                EDIT_IMAGE = ''
+                panel = None
+        else:
+            tk.Label(self, text="Theres are no pictures in the storage").pack()
+
+
+class PicturesPage2(tk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        global panel, storage_pictures, count_pictures, count_five_pictures,\
+            BUTTON_IMAGE
+        count_five_pictures = 0
+        count_pictures = 0
+        tk.Label(self, text="Picture Page2", font=LARGEFONT).\
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
         tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
             place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
@@ -267,23 +340,30 @@ class PicturesPage1(tk.Frame):
             tk.Label(self, text="Theres are no pictures in the storage").pack()
 
 
-class PicturesPage2(tk.Frame):
+class PicturesPage3(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global panel, storage_pictures, count_pictures, count_five_pictures
+        global panel, storage_pictures, count_pictures, count_five_pictures,\
+            BUTTON_IMAGE
         count_five_pictures = 0
         count_pictures = 0
-        tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
-            place(x=960, y=20, anchor=tk.CENTER, width=1200, height=150)
-        tk.Button(self, text="Back to page1",
-                  command=lambda: master.switch_frame(StartPage)). \
-            place(x=200, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To upload pictures",
+        tk.Label(self, text="Picture Page3", font=LARGEFONT).\
+            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
+        tk.Label(self, text=f"Hello client: {USER_NAME}", font=MEDIUM1). \
+            place(x=600, y=85, anchor=tk.CENTER, width=200, height=20)
+        tk.Button(self, text="Go to Start Page", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)).\
+            place(x=125, y=700, anchor=tk.CENTER, width=250, height=50)
+        tk.Button(self, text="To upload pictures", relief=RAISED,
                   command=lambda: master.switch_frame(UploadPicturesPage)).\
-            place(x=300, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To Edit pictures").\
-            place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
+            place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
+        tk.Button(self, text="To Edit pictures", relief=RAISED,
+                  command=lambda: master.switch_frame(EditPicturesPage)).\
+            place(x=775, y=700, anchor=tk.CENTER, width=350, height=50)
         # command=lambda: master.switch_frame(EditPicturesPage)
+        tk.Button(self, text="Go to page2", relief=RAISED,
+                  command=lambda: master.switch_frame(StartPage)). \
+            place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
         if storage_pictures is not None:
             for image in storage_pictures:
                 print_pictures(image, self)
@@ -292,42 +372,21 @@ class PicturesPage2(tk.Frame):
             tk.Label(self, text="Theres are no pictures in the storage").pack()
 
 
-class PicturesPage3(tk.Frame):
-    def __init__(self, master):
-        super().__init__(master)
-        global panel, storage_pictures, count_pictures, count_five_pictures
-        count_five_pictures = 0
-        count_pictures = 0
-        tk.Label(self, text=Pictures_Page, font=LARGEFONT).\
-            place(x=960, y=20, anchor=tk.CENTER, width=1200, height=150)
-        tk.Button(self, text="Go to Start Page",
-                  command=lambda: master.switch_frame(StartPage)).\
-            place(x=100, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To upload pictures",
-                  command=lambda: master.switch_frame(UploadPicturesPage)).\
-            place(x=300, y=700, anchor=tk.CENTER, width=200, height=50)
-        tk.Button(self, text="To Edit pictures",
-                  command=lambda: master.switch_frame(EditPicturesPage)).\
-            place(x=500, y=700, anchor=tk.CENTER, width=200, height=50)
-        if storage_pictures is not None:
-            for image in storage_pictures:
-                print_pictures(image, self)
-                panel = None
-
-
 class EditPicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
         global EDIT_IMAGE, panel
+        if EDIT_IMAGE == '':
+            tk.Label(self, text="No picture was selected", font=MEDIUM1).\
+                place(x=600, y=90, anchor=tk.CENTER, width=200, height=40)
         image = EDIT_IMAGE
         tk.Label(self, text=Edit_Pictures_Page, font=LARGEFONT). \
-            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=150)
+            place(x=600, y=20, anchor=tk.CENTER, width=1200, height=100)
         tk.Button(self, text="Go to Start Page", relief=RAISED,
                   command=lambda: master.switch_frame(StartPage)). \
             place(x=125, y=700, anchor=tk.CENTER, width=250, height=50)
-        tk.Button(self, text="To upload the picture", relief=RAISED,
-                  ). \
-            place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
+        self.b = tk.Button(self, text="To upload the picture", relief=RAISED, command=lambda: self.sure())
+        self.b.place(x=425, y=700, anchor=tk.CENTER, width=350, height=50)
         tk.Button(self, text="To download the pictures", relief=RAISED,
                   ). \
             place(x=775, y=700, anchor=tk.CENTER, width=350, height=50)
@@ -335,9 +394,9 @@ class EditPicturesPage(tk.Frame):
                   command=lambda: master.switch_frame(PicturesPage1)). \
             place(x=1075, y=700, anchor=tk.CENTER, width=250, height=50)
         if panel is None:
-            panel = tk.Button(self, image=image, relief=FLAT)
+            panel = tk.Label(self, image=image, relief=FLAT)
             panel.image = image
-            panel.place(x=100, y=300, anchor=tk.CENTER)
+            panel.place(x=200, y=300, anchor=tk.CENTER)
         else:
             panel.configure(image=image)
             panel.image = image
@@ -358,6 +417,10 @@ class EditPicturesPage(tk.Frame):
         ttk.Entry()\
             .place(x=800, y=295, anchor=tk.CENTER, width=200, height=25)
         print(f'The image: {image}')
+
+    def sure(self):
+        self.b['text'] = "Are you sure?"
+        self.b['command'] = lambda: select_image(self, None)
 
 
 class UploadPicturesPage(tk.Frame):
@@ -380,7 +443,21 @@ class UploadPicturesPage(tk.Frame):
 
 
 if __name__ == '__main__':
-    root = MainWindow()
-    root.title("Pictures for your day")
-    root.minsize(1200, 1150)
-    root.mainloop()
+    # local host IP '127.0.0.1'
+    # host = '172.20.201.124'
+    host = '127.0.0.1'
+    port = 42069
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((host, port))
+        print("Connected to Server: ", s.getsockname())
+
+        root = MainWindow()
+        root.title("Pictures for your day")
+        root.minsize(1200, 1150)
+        root.mainloop()
+    except ConnectionError and ConnectionResetError as err:
+        print(f'Something came up: {err}')
+    finally:
+        s.close()
+        quit()
