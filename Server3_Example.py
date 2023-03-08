@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
+import io
 import socket
 import pickle
+import tempfile
 from _thread import *
+from PIL import Image
+import sqlite3
+
 
 # The client sends:
 # sends the username and the password to server for storage them in the DataBase
@@ -16,75 +21,164 @@ from _thread import *
 password_storage = []  # pa
 username_storage = []  # us
 pictures_storage = []  # pi
-password_protocol = 'pa'
-username_protocol = 'us'
-pictures_protocol = 'pi'
-password_exist = '1'
-password_not_exist = '2'
-username_exist = 'a'
-username_not_exist = 'b'
+
+pictures_to_server_protocol = 'ptsp'
+pictures_to_client_protocol = 'ptcp'
+log_in_client_protocol = 'LICP'
+sign_in_client_protocol = 'SICP'
+exist_check_protocol = 'ECP'
 
 gDict = {}
 userDict = {}
 
 
-def password_handle(protocol, password, c):
-    global password_storage, password_exist, password_not_exist
-    password_storage.append(password)
-    print(f'The password storage: {password_storage}')
-    if protocol == password_protocol + 'l':
-        for p in password_storage:
-            if password == p:
-                password_exist = pickle.dumps(password_exist)
-                c.sendall(password_exist)
-                return
-        c.sendall(pickle.dumps(password_not_exist))
+def sign_in(username, password, c):
+    exist = exist_signin_check(username)
+    if exist == 'True':
+        c.sendall(pickle.dumps('True'))
+    elif exist == 'False':
+        c.sendall(pickle.dumps('False'))
+        userDict[c] = username
+        connection_data = sqlite3.connect("username_password_storage.db")
+        cursor = connection_data.cursor()
+
+        cursor.execute("INSERT INTO username_password_storage (name, password) VALUES (?, ?)", (username, password))
+        connection_data.commit()
+        connection_data.close()
+
+        password_storage.append(password)
+        username_storage.append(username)
+        print(f'The username storage: {username_storage}')
+        print(f'The password storage: {password_storage}')
 
 
-def username_handle(protocol, username, c):
-    global username_storage, username_not_exist, username_exist
-    username_storage.append(username)
-    print(f'The username storage: {username_storage}')
-    if protocol == username_protocol + 'l':
-        for u in username_storage:
-            if username == u:
-                username_exist = pickle.dumps(username_exist)
-                c.sendall(username_exist)
-                return
-        c.sendall(pickle.dumps(username_not_exist))
+def log_in(username, password, c):
+    global username_storage, password_storage
+    place = 0
+    username_password_exist = pickle.dumps('False')
+    connection_data = sqlite3.connect("username_password_storage.db")
+    cursor = connection_data.cursor()
+
+    cursor.execute("SELECT * FROM username_password_storage")
+    users = cursor.fetchall()
+
+    connection_data.close()
+
+    for u in users:
+        if username == u[1]:
+            print("Username - True")
+            if password == users[place][2]:
+                print("Password - True")
+                username_password_exist = pickle.dumps('True')
+                userDict[c] = username
+                break
+        place += 1
+    c.sendall(username_password_exist)
 
 
-def picture_handle(picture):
-    pictures_storage.append(picture)
-    print(f'The picture storage: {pictures_storage}')
+def exist_signin_check(username):
+    exist = False
+    conn = sqlite3.connect("username_password_storage.db")
+    name = conn.cursor()
+
+    name.execute("SELECT * FROM username_password_storage")
+    users = name.fetchall()
+
+    for entry_user_name in users:
+        if username == entry_user_name[1]:
+            exist = True
+    if exist:
+        conn.close()
+        return 'True'
+    else:
+        conn.close()
+        return 'False'
+
+
+def serverside_picture_handle(c, number_pictures):
+    number_pictures = int(number_pictures)
+    while number_pictures > 0:
+        image_data = b''
+        c.sendall(pickle.dumps('ok'))
+        while True:
+            data = c.recv(1024)
+            print(f"\nThe data: {data}")
+            if data[-4:][:4] == b'aaaa':
+                print("hellllllooooo")
+                image_data += data[:-4]
+                break
+            else:
+                image_data += data
+
+        # Convert the image data into an image object
+        image = Image.open(io.BytesIO(image_data))
+
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            image.save(f, format='PNG')
+            image_path = f.name
+            pictures_storage.append(image_path)
+        number_pictures -= 1
+        print(pictures_storage)
+    c.sendall(pickle.dumps('Finish'))
+
+
+def clientside_picture_handle(c):
+    print("Helllloooo")
+    msg_pic_to_client = str(len(pictures_storage))
+    not_thing = b'aaaa'
+    print(msg_pic_to_client, type(msg_pic_to_client))
+    c.sendall(pickle.dumps(msg_pic_to_client))
+    print(f"storage paths: {pictures_storage} ")
+    for i in pictures_storage:
+        with open(i, 'rb') as f:
+            image_data = f.read()
+            """            print(f"The image: {i}")
+            print(f"The image data: {image_data}")"""
+        if pickle.loads(c.recv(1024)) == 'ok':
+            c.sendall(image_data)
+            c.sendall(not_thing)
 
 
 # receive function
+
+
 def receive(c):
-    while True:
-        # data received from client
-        data = c.recv(1024)
-        data = pickle.loads(data)
-        print(f'The data: {data}')
-        # print(f'The data decoded: {data[0].decode()} , {data[1].decode()}')
-        if data[0][0] + data[0][1] == password_protocol:
-            password_handle(data[0], data[1], c)
-        elif data[0][0] + data[0][1] == username_protocol:
-            userDict[c] = data[1]
-            username_handle(data[0], data[1], c)
-        elif data[0][0] + data[0][1] == pictures_protocol:
-            picture_handle(data[1])
+    try:
+        while True:
+            # data received from client
+            data = c.recv(1024)
+            data = pickle.loads(data)
+            print(f'The data: {data}')
+            # print(f'The data decoded: {data[0].decode()} , {data[1].decode()}')
+            if data[0] == log_in_client_protocol:
+                log_in(data[1], data[2], c)
+            elif data[0] == sign_in_client_protocol:
+                sign_in(data[1], data[2], c)
+            elif data[0] == pictures_to_server_protocol:
+                serverside_picture_handle(c, data[1])
+            elif data == pictures_to_client_protocol:
+                clientside_picture_handle(c)
+            elif data is None:
+                print('Bye')
+                print(f"{gDict.pop(c)} Has disconnected")
+                # lock released on exit
+                # print_lock.release()
+                exit_thread()
+                break
 
-        if not data or data == 'quit':
-            print('Bye')
-            print(f"{gDict.pop(c)} Has disconnected")
-            # lock released on exit
-            # print_lock.release()
-            exit_thread()
-            break
-        broadcast(c, data)
-
-    c.close()
+            if not data or data == 'quit':
+                print('Bye')
+                print(f"{gDict.pop(c)} Has disconnected")
+                # lock released on exit
+                # print_lock.release()
+                exit_thread()
+                break
+            broadcast(c, data)
+    except EOFError as err:
+        print(f"Something came up2: {err}")
+        print(f"{gDict.pop(c)} Has disconnected")
+    finally:
+        c.close()
 
 
 def broadcast(c, data):
@@ -95,7 +189,7 @@ def broadcast(c, data):
         # connection.sendall(pickle.dumps(f"{userDict[c]} > {data}"))
         # connection.send(message.encode('ascii'))
         print(f"Connection: {gDict.get(connection)} | Data: {data}")
-        print(f"{userDict[c]} send => {data}")
+        # print(f"{userDict[c]} send => {data}")
 
 
 def main():
@@ -123,7 +217,7 @@ def main():
 
             # receive(conn)
             start_new_thread(receive, (conn,))
-    except ConnectionError as err:
+    except ConnectionError and EOFError as err:
         print(f"Something came up : {err}")
         # Keyboard interrupt with CTRL + C, make sure to close active clients first
 
@@ -134,4 +228,15 @@ def main():
 
 
 if __name__ == '__main__':
+    connect_data = sqlite3.connect("username_password_storage.db")
+    user = connect_data.cursor()
+
+    user.execute("SELECT * FROM username_password_storage")
+    entries = user.fetchall()
+
+    print("ID - Name - password")
+    for entry in entries:
+        print(f"{entry[0]}: {entry[1]} - {entry[2]}")
+
+    connect_data.close()
     main()
