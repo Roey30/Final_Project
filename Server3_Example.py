@@ -27,22 +27,28 @@ pictures_to_client_protocol = 'ptcp'
 log_in_client_protocol = 'LICP'
 sign_in_client_protocol = 'SICP'
 exist_check_protocol = 'ECP'
+reset_all_picture_protocol = 'RAPP'
+
 
 gDict = {}
 userDict = {}
 
 
 def sign_in(username, password, c):
+    permission = False
+    if username == 'RoeyFiran':
+        if password == 'RoeyFiran12345':
+            permission = True
     exist = exist_signin_check(username)
     if exist == 'True':
         c.sendall(pickle.dumps('True'))
     elif exist == 'False':
         c.sendall(pickle.dumps('False'))
-        userDict[c] = username
         connection_data = sqlite3.connect("username_password_storage.db")
         cursor = connection_data.cursor()
 
-        cursor.execute("INSERT INTO username_password_storage (name, password) VALUES (?, ?)", (username, password))
+        cursor.execute("INSERT INTO username_password_storage (name, password, permission) VALUES (?, ?, ?)",
+                       (username, password, permission))
         connection_data.commit()
         connection_data.close()
 
@@ -69,10 +75,23 @@ def log_in(username, password, c):
             print("Username - True")
             if password == users[place][2]:
                 print("Password - True")
-                username_password_exist = pickle.dumps('True')
-                userDict[c] = username
+                print(len(userDict))
+                if len(userDict) == 0:
+                    print('User - True')
+                    username_password_exist = pickle.dumps('True')
+                    userDict[c] = username
+                else:
+                    for u_name in list(userDict):
+                        if username == userDict[u_name]:
+                            print('User - Taken')
+                            username_password_exist = pickle.dumps('Taken')
+                        else:
+                            print('User - True')
+                            username_password_exist = pickle.dumps('True')
+                            userDict[c] = username
                 break
         place += 1
+    print('User - False')
     c.sendall(username_password_exist)
 
 
@@ -139,6 +158,10 @@ def clientside_picture_handle(c):
             c.sendall(not_thing)
 
 
+def reset_all_pictures():
+    global pictures_storage
+    pictures_storage = []
+
 # receive function
 
 
@@ -165,7 +188,8 @@ def receive(c):
                 # print_lock.release()
                 exit_thread()
                 break
-
+            elif data[0] == reset_all_picture_protocol:
+                reset_all_pictures()
             if not data or data == 'quit':
                 print('Bye')
                 print(f"{gDict.pop(c)} Has disconnected")
@@ -176,6 +200,7 @@ def receive(c):
             broadcast(c, data)
     except EOFError as err:
         print(f"Something came up2: {err}")
+        print(f"User {userDict.pop(c)} Has disconnected")
         print(f"{gDict.pop(c)} Has disconnected")
     finally:
         c.close()
@@ -183,13 +208,25 @@ def receive(c):
 
 def broadcast(c, data):
     # print(" | ".join(str(i) for i in gDict.values()))
-
+    print(f"gDict: {gDict}")
     for connection in gDict:
-        # message = f"{userDict[c]} > {data}"
-        # connection.sendall(pickle.dumps(f"{userDict[c]} > {data}"))
-        # connection.send(message.encode('ascii'))
         print(f"Connection: {gDict.get(connection)} | Data: {data}")
-        # print(f"{userDict[c]} send => {data}")
+    if len(userDict) != 0:
+        if c in userDict:
+            print(f"User {userDict[c]} send => {data}")
+            print("List of Users and their socket:")
+    for u in userDict:
+        print(f"socket: {u} user: {userDict[u]}")
+
+    conn = sqlite3.connect('username_password_storage.db')
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM username_password_storage")
+    rows = cur.fetchall()
+
+    for row in rows:
+        print(row)
+    cur.close()
+    conn.close()
 
 
 def main():
@@ -234,9 +271,9 @@ if __name__ == '__main__':
     user.execute("SELECT * FROM username_password_storage")
     entries = user.fetchall()
 
-    print("ID - Name - password")
+    print("ID - Name - password - permission(1-True, 0-False)")
     for entry in entries:
-        print(f"{entry[0]}: {entry[1]} - {entry[2]}")
+        print(f"{entry[0]}: {entry[1]} - {entry[2]} - {entry[3]}")
 
     connect_data.close()
     main()
